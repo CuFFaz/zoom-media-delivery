@@ -4,9 +4,8 @@ from config import DevelopmentConfig, ProductionConfig
 from models.models import db, Sources, Recording, SchedulerLog, RemoteDatabases
 from scheduler.scheduler import fetch_meetings_from_lms, fetch_recordings_from_source, \
                                 push_recordings_to_dest, pull_recording_status_from_dest
-from cryptography.fernet import Fernet
+from functions.functions import encrypt_credentials
 from config import Config
-
 import atexit
 import json
 
@@ -35,9 +34,6 @@ scheduler.add_job(fetch_meetings_from_lms, 'interval', seconds=10)
 # scheduler.add_job(pull_recording_status_from_dest, 'interval', seconds=10)
 atexit.register(lambda: scheduler.shutdown())
 
-# Encryption key
-
-
 def mandatory_keyval_empty_check(data, keys):
     for key in keys:
         if key not in data:
@@ -45,16 +41,6 @@ def mandatory_keyval_empty_check(data, keys):
         elif data[key] == "":
             return [False, key]
     return [True, True]
-
-def encrypt_credentials(credentials_dict, key):
-    plain_text = json.dumps(credentials_dict)
-    cipher_suite = Fernet(key)
-    return cipher_suite.encrypt(plain_text.encode()).decode()
-
-def decrypt_credentials(encrypted_data, key):
-    cipher_suite = Fernet(key)
-    decrypted_data = cipher_suite.decrypt(encrypted_data.encode()).decode()
-    return json.loads(decrypted_data)
 
 @app.route('/')
 def index():
@@ -79,8 +65,6 @@ def store_credentials():
     db.session.commit()
 
     return jsonify({'message': 'Credentials stored successfully'}), 200
-
-
 
 if __name__ == '__main__':
     app.run()

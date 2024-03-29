@@ -1,23 +1,15 @@
-from cryptography.fernet import Fernet
 from models.models import RemoteDatabases
-from config import Config
-from flask import jsonify
-import json
-
-def decrypt_credentials(encrypted_data, key):
-    cipher_suite = Fernet(key)
-    decrypted_data = cipher_suite.decrypt(encrypted_data.encode()).decode()
-    return json.loads(decrypted_data)
+from functions.functions import decrypt_credentials
 
 def fetch_meetings_from_lms():
-    from app import scheduler, app
+    from app import app
 
     with app.app_context():
         print("scheduler start")
         credentials = RemoteDatabases.query.all()
         for cred in credentials:
-            decrypted_src = decrypt_credentials(cred.src, Config.ENCRYPTION_KEY)
-            decrypted_pwd = decrypt_credentials(cred.pwd, Config.ENCRYPTION_KEY)
+            decrypted_src = decrypt_credentials(cred.src)
+            decrypted_pwd = decrypt_credentials(cred.pwd)
 
             print(decrypted_src)
             print(decrypted_pwd)
