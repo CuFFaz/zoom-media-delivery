@@ -4,6 +4,8 @@ from urllib.parse import quote_plus
 class Config:
     DEBUG = False
     
+    ENCRYPTION_KEY = b'Z-2tUU6ni8ZCR62hLDaHiwd3HhhfUvMFY86p8waproM='
+
     # Security
     SESSION_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_HTTPONLY = True
@@ -17,7 +19,7 @@ class Config:
         config('DB_PORT', default=3306),
         config('DB_NAME', default='central_db')
     )
-    
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 

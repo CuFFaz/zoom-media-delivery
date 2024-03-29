@@ -5,8 +5,8 @@ db = SQLAlchemy()
 class RemoteDatabases(db.Model):
     __tablename__ = 'remotes'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    src = db.Column(db.String)
-    pwd = db.Column(db.String)
+    src = db.Column(db.Text)
+    pwd = db.Column(db.Text)
 
 class Sources(db.Model):
     __tablename__ = 'sources'
