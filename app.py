@@ -60,11 +60,12 @@ def decrypt_credentials(encrypted_data, key):
 def index():
 
     credentials = RemoteDatabases.query.first()
-    decrypted_src = decrypt_credentials(credentials.src, Config.ENCRYPTION_KEY)
-    decrypted_pwd = decrypt_credentials(credentials.pwd, Config.ENCRYPTION_KEY)
+    if credentials:
+        decrypted_src = decrypt_credentials(credentials.src, Config.ENCRYPTION_KEY)
+        decrypted_pwd = decrypt_credentials(credentials.pwd, Config.ENCRYPTION_KEY)
 
-    print(decrypted_src)
-    print(decrypted_pwd)
+        print(decrypted_src)
+        print(decrypted_pwd)
     return 'Running!'
 
 @app.route('/add', methods=['POST'])
