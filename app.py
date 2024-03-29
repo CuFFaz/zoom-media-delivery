@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from apscheduler.schedulers.background import BackgroundScheduler
 from config import DevelopmentConfig, ProductionConfig
 from models.models import db, Sources, Recording, SchedulerLog, RemoteDatabases
-from scheduler.scheduler import fetch_meetings_from_lms, fetch_recordings_from_source, \
+from functions.scheduler import fetch_meetings_from_lms, fetch_recordings_from_source, \
                                 push_recordings_to_dest, pull_recording_status_from_dest
 from functions.functions import encrypt_credentials
 from config import Config
