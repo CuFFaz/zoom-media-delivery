@@ -10,12 +10,17 @@ def decrypt_credentials(encrypted_data, key):
     return json.loads(decrypted_data)
 
 def fetch_meetings_from_lms():
-    credentials = RemoteDatabases.query.first()
-    decrypted_src = decrypt_credentials(credentials.src, Config.ENCRYPTION_KEY)
-    decrypted_pwd = decrypt_credentials(credentials.pwd, Config.ENCRYPTION_KEY)
+    from app import scheduler, app
 
-    print(decrypted_src)
-    print(decrypted_pwd)
+    with app.app_context():
+        print("scheduler start")
+        credentials = RemoteDatabases.query.all()
+        for cred in credentials:
+            decrypted_src = decrypt_credentials(cred.src, Config.ENCRYPTION_KEY)
+            decrypted_pwd = decrypt_credentials(cred.pwd, Config.ENCRYPTION_KEY)
+
+            print(decrypted_src)
+            print(decrypted_pwd)
 
     return
 

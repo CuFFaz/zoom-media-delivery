@@ -29,7 +29,7 @@ scheduler.start()
 # }
 # scheduler.configure(job_defaults=job_defaults)
 
-# scheduler.add_job(fetch_meetings_from_lms, 'interval', seconds=10)
+scheduler.add_job(fetch_meetings_from_lms, 'interval', seconds=10)
 # scheduler.add_job(fetch_recordings_from_source, 'interval', seconds=10)
 # scheduler.add_job(push_recordings_to_dest, 'interval', seconds=10)
 # scheduler.add_job(pull_recording_status_from_dest, 'interval', seconds=10)
@@ -58,14 +58,6 @@ def decrypt_credentials(encrypted_data, key):
 
 @app.route('/')
 def index():
-
-    credentials = RemoteDatabases.query.first()
-    if credentials:
-        decrypted_src = decrypt_credentials(credentials.src, Config.ENCRYPTION_KEY)
-        decrypted_pwd = decrypt_credentials(credentials.pwd, Config.ENCRYPTION_KEY)
-
-        print(decrypted_src)
-        print(decrypted_pwd)
     return 'Running!'
 
 @app.route('/add', methods=['POST'])
