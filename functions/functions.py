@@ -23,6 +23,6 @@ def get_unix_time(ntime=None):
 def get_unix_yesterday():
     current_datetime = datetime.datetime.now()
     one_day = datetime.timedelta(days=1)
-    yesterday_datetime = current_datetime - one_day
-    yesterday_midnight = yesterday_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
-    return int(yesterday_midnight.timestamp())
+    # yesterday_datetime = current_datetime - one_day
+    current_datetime = current_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
+    return int(current_datetime.timestamp())
