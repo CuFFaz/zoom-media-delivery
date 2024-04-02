@@ -71,7 +71,6 @@ def fetch_recordings_from_source():
         refresh_token_endtime_unix = get_unix_time()
         zoom_token_expiry_duration = 3600               # Assuming 1 hour expiry duration
 
-
         meetings_with_status = Meetings.query.filter_by(meeting_process_status=0).all()
 
         for meeting in meetings_with_status:
@@ -83,29 +82,24 @@ def fetch_recordings_from_source():
                 url = f"{zoom_token_url}?grant_type={zoom_grant_type}&redirect_uri={zoom_redirect_uri} \
                         &refresh_token={refresh_token}&client_id={zoom_client_id}&client_secret={zoom_client_secret}"
 
-                try:
-                    response = requests.post(url)
-                    response.raise_for_status()
-                    response_json = response.json()
+                response = requests.post(url)
+                response_json = response.json()
 
-                    if ('refresh_token' in response_json) and ('access_token' in response_json):
+                if ('refresh_token' in response_json) and ('access_token' in response_json):
 
-                        access_token = response_json['access_token']
-                        refresh_token = response_json['refresh_token']
+                    access_token = response_json['access_token']
+                    refresh_token = response_json['refresh_token']
 
-                        access_token_instance = db.session.query(EndpointTokens).filter_by(token_type='access_token').first()
-                        refresh_token_instance = db.session.query(EndpointTokens).filter_by(token_type='refresh_token').first()
+                    access_token_instance = db.session.query(EndpointTokens).filter_by(token_type='access_token').first()
+                    refresh_token_instance = db.session.query(EndpointTokens).filter_by(token_type='refresh_token').first()
 
-                        access_token_instance.token_value = access_token
-                        refresh_token_instance.token_value = refresh_token
+                    access_token_instance.token_value = access_token
+                    refresh_token_instance.token_value = refresh_token
 
-                        access_token_instance.updated_time = get_unix_time()
-                        refresh_token_instance.updated_time = get_unix_time()
-                        db.session.commit()
+                    access_token_instance.updated_time = get_unix_time()
+                    refresh_token_instance.updated_time = get_unix_time()
+                    db.session.commit()
 
-                except requests.exceptions.RequestException as e:
-                    print(f"ZOOM Regen: Requests error: {e}")
-                    return
             else:
                 access_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='access_token').first()[0]
 
@@ -248,18 +242,20 @@ def push_recording_to_source():
             insert_recording_query = '''INSERT INTO mdl_zoom_vimeo_recordings_mapping
                 (meeting_id, vimeo_link, vimeo_player_embed_url, created_time) VALUES (
                 :meeting_id, :vimeo_link, :vimeo_player_embed_url, :created_time)'''
-            
-            params = {"created_time": get_unix_time(),
+
+            params = {
                     "meeting_id": recording.meeting_id,
                     "vimeo_link": recording.vimeo_link,
-                    "vimeo_player_embed_url": recording.vimeo_player_embed_url}
+                    "vimeo_player_embed_url": recording.vimeo_player_embed_url,
+                    "created_time": get_unix_time()}
 
             remote_session.execute(text(insert_recording_query), params)
             remote_session.commit()
 
             recording_instance = db.session.query(Recording).filter_by(id=recording.id).first()
             recording_instance.lms_push_status = 1
-            db.session.commit()
+
+        db.session.commit()
             
     print("scheduler end")
     return
