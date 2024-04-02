@@ -2,29 +2,38 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+class EndpointTokens(db.Model):
+    __tablename__ = 'endpoint_tokens'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    token_type = db.Column(db.Text)
+    token_value = db.Column(db.Text)
+    updated_time = db.Column(db.Integer)
+
 class RemoteDatabases(db.Model):
     __tablename__ = 'remotes'
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     src = db.Column(db.Text)
     pwd = db.Column(db.Text)
 
-class Sources(db.Model):
-    __tablename__ = 'sources'
+class Meetings(db.Model):
+    __tablename__ = 'meetings'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    lms_id = db.Column(db.Integer)
+    remote_id = db.Column(db.Integer)
     course_id = db.Column(db.Integer)
-    meeting_id = db.Column(db.Integer)
+    meeting_id = db.Column(db.String(255))
     meeting_name = db.Column(db.Text)
+    meeting_process_status = db.Column(db.Integer)
 
 class Recording(db.Model):
     __tablename__ = 'recordings'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    source_id = db.Column(db.Integer)
-    lms_id = db.Column(db.Integer)
+    remote_id = db.Column(db.Integer)
     course_id = db.Column(db.Integer)
-    meeting_id = db.Column(db.Integer)
+    meeting_id = db.Column(db.String(255))
     meeting_name = db.Column(db.Text)
     zoom_recording_uuid = db.Column(db.String(255))
     zoom_recording_download_url = db.Column(db.Text)
@@ -37,6 +46,7 @@ class Recording(db.Model):
     process_status = db.Column(db.String(50))
     play_status = db.Column(db.String(50))
     status = db.Column(db.Integer)
+    lms_push_status = db.Column(db.Integer, default=0)
     timecreated = db.Column(db.Integer)
     timemodified = db.Column(db.Integer)
     comment = db.Column(db.Text)

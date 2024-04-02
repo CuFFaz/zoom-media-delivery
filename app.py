@@ -1,13 +1,12 @@
 from flask import Flask, request, jsonify
 from apscheduler.schedulers.background import BackgroundScheduler
 from config import DevelopmentConfig, ProductionConfig
-from models.models import db, Sources, Recording, SchedulerLog, RemoteDatabases
+from models.models import db, Meetings, Recording, SchedulerLog, RemoteDatabases
 from functions.scheduler import fetch_meetings_from_lms, fetch_recordings_from_source, \
-                                push_recordings_to_dest, pull_recording_status_from_dest
+                                pull_recording_status_from_dest, push_recording_to_source
 from functions.functions import encrypt_credentials
 from config import Config
 import atexit
-import json
 
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -19,7 +18,7 @@ with app.app_context():
     db.create_all()
 
 # APScheduler setup
-scheduler = BackgroundScheduler(daemon=True)
+scheduler = BackgroundScheduler()
 scheduler.start()
 
 # job_defaults = {
@@ -28,10 +27,24 @@ scheduler.start()
 # }
 # scheduler.configure(job_defaults=job_defaults)
 
-scheduler.add_job(fetch_meetings_from_lms, 'interval', seconds=10)
+# scheduler.add_job(fetch_meetings_from_lms, 'interval', seconds=10)
 # scheduler.add_job(fetch_recordings_from_source, 'interval', seconds=10)
-# scheduler.add_job(push_recordings_to_dest, 'interval', seconds=10)
 # scheduler.add_job(pull_recording_status_from_dest, 'interval', seconds=10)
+# scheduler.add_job(push_recording_to_source, 'interval', seconds=10)
+
+# scheduler.add_job(fetch_meetings_from_lms, 'cron', hour=Config.scheduler_durations['fetch_meetings_from_lms']['hour']
+#                                                 , minute=Config.scheduler_durations['fetch_meetings_from_lms']['minute']) 
+# scheduler.add_job(fetch_recordings_from_source, 'interval', seconds=Config.scheduler_durations['fetch_recordings_from_zoom'])
+# scheduler.add_job(pull_recording_status_from_dest, 'interval', seconds=Config.scheduler_durations['fetch_recording_status_from_vimeo'])
+# scheduler.add_job(push_recording_to_source, 'interval', seconds=Config.scheduler_durations['push_recording_link_to_lms'])
+
+# scheduler.add_job(fetch_recordings_from_source, 'cron', hour=Config.scheduler_durations['fetch_recordings_from_zoom']['hour']
+#                                                 , minute=Config.scheduler_durations['fetch_recordings_from_zoom']['minute'])
+# scheduler.add_job(pull_recording_status_from_dest, 'cron', hour=Config.scheduler_durations['fetch_recording_status_from_vimeo']['hour']
+#                                                 , minute=Config.scheduler_durations['fetch_recording_status_from_vimeo']['minute'])
+# scheduler.add_job(push_recording_to_source, 'cron', hour=Config.scheduler_durations['push_recording_link_to_lms']['hour']
+#                                                 , minute=Config.scheduler_durations['push_recording_link_to_lms']['minute'])
+
 atexit.register(lambda: scheduler.shutdown())
 
 def mandatory_keyval_empty_check(data, keys):
@@ -50,7 +63,7 @@ def index():
 def store_credentials():
     data = request.json
 
-    field_status = mandatory_keyval_empty_check(data, ["host", "uname", "pwd", "db_name"])
+    field_status = mandatory_keyval_empty_check(data, ["host", "uname", "pwd", "db_name", "port"])
     if not field_status[0]:
         return jsonify({'message': field_status[1] + " field is missing"}), 400
 
@@ -67,4 +80,4 @@ def store_credentials():
     return jsonify({'message': 'Credentials stored successfully'}), 200
 
 if __name__ == '__main__':
-    app.run()
+    app.run(use_reloader=False)
