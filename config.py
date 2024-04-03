@@ -32,9 +32,9 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     scheduler_durations = {
-                            "fetch_meetings_from_lms" :             {"hour" : 16, "minute" : 19},
+                            "fetch_meetings_from_lms" :             {"hour" : 11, "minute" : 57},
                             "fetch_recordings_from_zoom" :          10,                             # in seconds                                
-                            "fetch_recording_status_from_vimeo" :   10,                             # in seconds
+                            "fetch_recording_status_from_vimeo" :   15,                             # in seconds
                             "push_recording_link_to_lms" :          10,                             # in seconds
                         }
 
@@ -43,17 +43,3 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     pass
-
-# $CFG->dbtype    = 'mysqli';
-# $CFG->dblibrary = 'native';
-# $CFG->dbhost    = '15.206.93.178';
-# $CFG->dbname    = 'lms_41';
-# $CFG->dbuser    = 'lms41';
-# $CFG->dbpass    = 'lms2023tle';
-# $CFG->prefix    = 'mdl_';
-# $CFG->dboptions = array (
-#   'dbpersist' => 0,
-#   'dbport' => '',
-#   'dbsocket' => '',
-#   'dbcollation' => 'utf8mb4_0900_ai_ci',
-# );

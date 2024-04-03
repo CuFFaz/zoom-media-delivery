@@ -28,7 +28,7 @@ scheduler.start()
 # scheduler.configure(job_defaults=job_defaults)
 
 # scheduler.add_job(fetch_meetings_from_lms, 'cron', hour=Config.scheduler_durations['fetch_meetings_from_lms']['hour']
-#                                                 , minute=Config.scheduler_durations['fetch_meetings_from_lms']['minute']) 
+#                                                 , minute=Config.scheduler_durations['fetch_meetings_from_lms']['minute'])
 scheduler.add_job(fetch_recordings_from_source, 'interval', seconds=Config.scheduler_durations['fetch_recordings_from_zoom'])
 scheduler.add_job(pull_recording_status_from_dest, 'interval', seconds=Config.scheduler_durations['fetch_recording_status_from_vimeo'])
 scheduler.add_job(push_recording_to_source, 'interval', seconds=Config.scheduler_durations['push_recording_link_to_lms'])

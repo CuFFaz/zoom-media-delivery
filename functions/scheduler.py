@@ -24,6 +24,7 @@ def fetch_meetings_from_lms():
     with app.app_context():
         print("scheduler start")
         credentials = RemoteDatabases.query.all()
+
         for cred in credentials:
             decrypted_src = decrypt_credentials(cred.src)
             decrypted_pwd = decrypt_credentials(cred.pwd)
@@ -37,19 +38,22 @@ def fetch_meetings_from_lms():
                                 '''
 
             meeting_data = remote_session.execute(text(get_meeting_query), {"current_date_unix": get_unix_yesterday()}).mappings().all()
-            for item in meeting_data:
-                saved_meetings = db.session.query(Meetings).filter_by(meeting_id=item['meeting_id']).first()
-                if saved_meetings:
-                    continue
-                meeting = Meetings(
-                    remote_id=cred.id,
-                    course_id=item['course'],
-                    meeting_id=item['meeting_id'],
-                    meeting_name=item['name'],
-                    meeting_process_status=0
-                )
-                db.session.add(meeting)
-            db.session.commit()
+            if meeting_data:
+                for item in meeting_data:
+                    saved_meetings = db.session.query(Meetings).filter_by(meeting_id=item['meeting_id']).first()
+                    if saved_meetings:
+                        continue
+                    meeting = Meetings(
+                        remote_id=cred.id,
+                        course_id=item['course'],
+                        meeting_id=item['meeting_id'],
+                        meeting_name=item['name'],
+                        meeting_process_status=0
+                    )
+                    db.session.add(meeting)
+                db.session.commit()
+
+    print("scheduler end")
     return
 
 
@@ -226,7 +230,7 @@ def push_recording_to_source():
         print("scheduler start")
 
         recording_with_status = Recording.query.filter_by(lms_push_status=0, status=1).all()
-
+        print(recording_with_status)
         for recording in recording_with_status:
 
             remote_creds = db.session.query(RemoteDatabases).filter_by(id=recording.remote_id).first()
@@ -250,7 +254,7 @@ def push_recording_to_source():
 
             remote_session.execute(text(insert_recording_query), params)
             remote_session.commit()
-
+            
             recording_instance = db.session.query(Recording).filter_by(id=recording.id).first()
             recording_instance.lms_push_status = 1
 
