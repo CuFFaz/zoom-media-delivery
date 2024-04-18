@@ -7,6 +7,7 @@ from functions.scheduler import fetch_meetings_from_lms, fetch_recordings_from_s
 from functions.functions import encrypt_credentials
 from config import Config
 import atexit
+import os
 
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -19,19 +20,24 @@ with app.app_context():
 
 # APScheduler setup
 scheduler = BackgroundScheduler()
-scheduler.start()
-
-# job_defaults = {
-#     'coalesce': False,
-#     'max_instances': 1
-# }
-# scheduler.configure(job_defaults=job_defaults)
 
 # scheduler.add_job(fetch_meetings_from_lms, 'cron', hour=Config.scheduler_durations['fetch_meetings_from_lms']['hour']
 #                                                 , minute=Config.scheduler_durations['fetch_meetings_from_lms']['minute'])
+scheduler.add_job(fetch_meetings_from_lms, 'interval', seconds=Config.scheduler_durations['fetch_meetings_from_lms'])
 scheduler.add_job(fetch_recordings_from_source, 'interval', seconds=Config.scheduler_durations['fetch_recordings_from_zoom'])
 scheduler.add_job(pull_recording_status_from_dest, 'interval', seconds=Config.scheduler_durations['fetch_recording_status_from_vimeo'])
 scheduler.add_job(push_recording_to_source, 'interval', seconds=Config.scheduler_durations['push_recording_link_to_lms'])
+
+# scheduler.configure({
+#     # 'coalesce': True,  # Combine multiple events into one
+#     'max_instances': 1,  # Only allow one instance to run at a time
+#     'misfire_grace_time': 60  # Allow a grace time for misfires
+# })
+scheduler.start()
+
+# if os.environ.get("scheduler_lock") == "1":
+#     scheduler.start()
+#     os.environ["scheduler_lock"] = os.environ.get("scheduler_lock") + "1"
 
 atexit.register(lambda: scheduler.shutdown())
 

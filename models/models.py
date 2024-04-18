@@ -62,9 +62,10 @@ class SchedulerLog(db.Model):
     start_time = db.Column(db.Integer)
     end_time = db.Column(db.Integer)
     retry_count = db.Column(db.Integer)
-    connection_status = db.Column(db.Integer)
-    status = db.Column(db.Integer)
-    error = db.Column(db.Text)
+    processed_meetings = db.Column(db.Text)
+    failed_meetings = db.Column(db.Text)
+    status = db.Column(db.Text)
+    exceptions = db.Column(db.Text)
 
     def __repr__(self):
         return f"<SchedulerLog(id={self.id}, scheduler_name='{self.scheduler_name}', status='{self.status}')>"
