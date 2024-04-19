@@ -10,8 +10,8 @@ import atexit
 import os
 
 app = Flask(__name__)
-app.config.from_object(DevelopmentConfig)
-# app.config.from_object(ProductionConfig)
+# app.config.from_object(DevelopmentConfig)
+app.config.from_object(ProductionConfig)
 
 db.init_app(app)
 
@@ -67,7 +67,7 @@ def store_credentials():
     encrypted_src = encrypt_credentials(data, Config.ENCRYPTION_KEY)
     encrypted_pwd = encrypt_credentials({'password': pwd_data}, Config.ENCRYPTION_KEY)
     
-    remote_db = RemoteDatabases(src=encrypted_src, pwd=encrypted_pwd)
+    remote_db = RemoteDatabases(src=encrypted_src, pwd=encrypted_pwd) 
     db.session.add(remote_db)
     db.session.commit()
 
