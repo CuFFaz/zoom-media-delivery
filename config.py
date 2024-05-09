@@ -32,10 +32,10 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     scheduler_durations = {
-                            "fetch_meetings_from_lms" :             45,
-                            "fetch_recordings_from_zoom" :          35,                             # in seconds                                
-                            "fetch_recording_status_from_vimeo" :   25,                             # in seconds
-                            "push_recording_link_to_lms" :          15,                             # in seconds
+                            "fetch_meetings_from_lms" :             5,
+                            "fetch_recordings_from_zoom" :          5,                             # in seconds                                
+                            "fetch_recording_status_from_vimeo" :   5,                             # in seconds
+                            "push_recording_link_to_lms" :          5,                             # in seconds
                         }
 
 class DevelopmentConfig(Config):

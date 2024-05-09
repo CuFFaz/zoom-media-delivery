@@ -25,6 +25,9 @@ class Meetings(db.Model):
     course_id = db.Column(db.Integer)
     meeting_id = db.Column(db.String(255))
     meeting_name = db.Column(db.Text)
+    # 0 - Non recurring meets
+    # 1 - recurring meets
+    meeting_type = db.Column(db.Integer, default=0)
     meeting_process_status = db.Column(db.Integer)
 
 class Recording(db.Model):
