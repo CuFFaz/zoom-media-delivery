@@ -57,6 +57,9 @@ def fetch_meetings_from_lms():
                         try:
                             access_token = get_token(token_regen_flag)
                         except Exception as e:
+                            import traceback
+                            traceback.print_exc()
+
                             cron_status = False
                             comment = "Zoom token regen failed! Exception : " + str(e)
                             break
@@ -69,7 +72,7 @@ def fetch_meetings_from_lms():
 
 
                         if saved_meetings:
-                            comment += f"Meeting {item['meeting_id']} already added! \n"
+                            # comment += f"Meeting {item['meeting_id']} already added! \n"
                             continue
 
                         zoom_url = f"https://api.zoom.us/v2/meetings/{item['meeting_id']}"
@@ -130,6 +133,9 @@ def fetch_meetings_from_lms():
                 else:
                     comment += "No new meeting data found in " + decrypted_src['db_name'] + "\n"
         except Exception as e:
+            import traceback
+            traceback.print_exc()
+
             cron_status = False
             comment = e
 
@@ -216,6 +222,8 @@ def fetch_recordings_from_source():
                 try:
                     access_token = get_token(token_regen_flag)
                 except Exception as e:
+                    import traceback
+                    traceback.print_exc()
                     cron_status = False
                     comment = "Zoom token regen failed! Exception : " + str(e)
                     break
@@ -260,6 +268,9 @@ def fetch_recordings_from_source():
                         continue
 
                 except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+
                     cron_status = False
                     comment += f"Zoom API request failed while processing Meeting Tab ID : {meeting.id} - Exception : "+ str(e) +"\n"
                     failed_meetings.append(str(meeting.id))
@@ -288,6 +299,9 @@ def fetch_recordings_from_source():
                         continue
 
                 except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+
                     cron_status = False
                     comment += f"Vimeo API request failed while processing Meeting Tab ID : {meeting.id} - Exception : "+ str(e) + "\n"
                     failed_meetings.append(str(meeting.id))
@@ -322,6 +336,9 @@ def fetch_recordings_from_source():
                     meeting_update.meeting_process_status = 1
 
                 except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+
                     cron_status = False
                     comment += f"Failed while inserting Meeting Tab ID : {meeting.id} - Exception : "+ str(e) + "\n"
                     failed_meetings.append(str(meeting.id))
@@ -329,6 +346,8 @@ def fetch_recordings_from_source():
 
             db.session.commit()
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             cron_status = False
             comment = e
 
@@ -400,6 +419,9 @@ def pull_recording_status_from_dest():
                 time.sleep(2)
 
             except Exception as e:
+                import traceback
+                traceback.print_exc()
+
                 cron_status = False
                 comment += f"Something went wrong while updating vimeo status at Recording ID : {recording.id} - Exception : "+ str(e) +" \n"
                 failed_meetings.append(str(recording.meeting_tab_id))
@@ -466,6 +488,9 @@ def push_recording_to_source():
                 recording_instance.lms_push_status = 1
                 db.session.commit()
             except Exception as e:
+                import traceback
+                traceback.print_exc()
+        
                 cron_status = False
                 comment += f"Something went wrong while pushing recording_id : {recording.id} to lms - Exception :"+ str(e) +" \n"
                 failed_meetings.append(str(recording.meeting_tab_id))
