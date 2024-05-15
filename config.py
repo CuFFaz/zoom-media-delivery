@@ -33,7 +33,7 @@ class Config:
 
     scheduler_durations = {
                             "fetch_meetings_from_lms" :             10,
-                            "fetch_recordings_from_zoom" :          35,                             # in seconds                                
+                            "fetch_recordings_from_zoom" :          5,                             # in seconds                                
                             "fetch_recording_status_from_vimeo" :   30,                             # in seconds
                             "push_recording_link_to_lms" :          25,                             # in seconds
                         }

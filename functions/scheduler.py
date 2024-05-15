@@ -217,9 +217,10 @@ def fetch_recordings_from_source():
             meetings_with_status = Meetings.query.filter_by(meeting_process_status=0) \
                                                  .filter(Meetings.meeting_end_time > get_unix_today_midnight()) \
                                                  .filter(Meetings.meeting_end_time <= get_unix_time()).all()
+            print(meetings_with_status)
 
             for meeting in meetings_with_status:
-                processed_meetings.append(meeting.meeting_id)
+                processed_meetings.append(meeting.id)
 
                 try:
                     access_token = get_token(token_regen_flag)
@@ -272,14 +273,14 @@ def fetch_recordings_from_source():
 
                     if 'code' in zoom_response and zoom_response['code'] == 124:  # INVALID TOKEN ERROR
                         cron_status = False
-                        comment += f"Invalid token error while processing Meeting ID : {meeting.meeting_id} \n"
-                        failed_meetings.append(meeting.meeting_id)
+                        comment += f"Invalid token error while processing Meeting ID : {meeting.id} \n"
+                        failed_meetings.append(meeting.id)
                         continue
 
                     if 'code' in zoom_response and zoom_response['code'] == 3301:  # RECORDING NOT AVAILABLE
                         cron_status = False
-                        comment += f"Recording not found while processing Meeting ID : {meeting.meeting_id} \n"
-                        failed_meetings.append(meeting.meeting_id)
+                        comment += f"Recording not found while processing Meeting ID : {meeting.id} \n"
+                        failed_meetings.append(meeting.id)
                         continue
 
                     # get only mp4 recordings
@@ -292,14 +293,14 @@ def fetch_recordings_from_source():
                         recording_link = mp4_recording['download_url']
                     else:
                         cron_status = False
-                        comment += f"MP4 recording not found on zoom while processing Meeting ID : {meeting.meeting_id} \n"
-                        failed_meetings.append(meeting.meeting_id)
+                        comment += f"MP4 recording not found on zoom while processing Meeting ID : {meeting.id} \n"
+                        failed_meetings.append(meeting.id)
                         continue
 
                 except Exception as e:
                     cron_status = False
-                    comment += f"Zoom API request failed while processing Meeting ID : {meeting.meeting_id} - Exception : "+ str(e) +"\n"
-                    failed_meetings.append(meeting.meeting_id)
+                    comment += f"Zoom API request failed while processing Meeting ID : {meeting.id} - Exception : "+ str(e) +"\n"
+                    failed_meetings.append(meeting.id)
                     continue
 
                 try:
@@ -320,14 +321,14 @@ def fetch_recordings_from_source():
 
                     if 'error_code' in vimeo_response and vimeo_response['error_code'] == 4101:  # Insufficient space on vimeo error
                         cron_status = False
-                        comment += f"Insufficient space on vimeo while processing Meeting ID : {meeting.meeting_id} \n"
-                        failed_meetings.append(meeting.meeting_id)
+                        comment += f"Insufficient space on vimeo while processing Meeting ID : {meeting.id} \n"
+                        failed_meetings.append(meeting.id)
                         continue
 
                 except Exception as e:
                     cron_status = False
-                    comment += f"Vimeo API request failed while processing Meeting ID : {meeting.meeting_id} - Exception : "+ str(e) + "\n"
-                    failed_meetings.append(meeting.meeting_id)
+                    comment += f"Vimeo API request failed while processing Meeting ID : {meeting.id} - Exception : "+ str(e) + "\n"
+                    failed_meetings.append(meeting.id)
                     continue
 
                 try:
@@ -354,16 +355,19 @@ def fetch_recordings_from_source():
                             )
                     db.session.add(recording)
 
-                    meeting_update = Meetings.query.filter_by(meeting_id=meeting.meeting_id).first()
+                    meeting_update = Meetings.query.filter_by(id=meeting.id).first()
                     meeting_update.meeting_process_status = 1
+
                 except Exception as e:
                     cron_status = False
-                    comment += f"Failed while inserting Meeting ID : {meeting.meeting_id} - Exception : "+ str(e) + "\n"
-                    failed_meetings.append(meeting.meeting_id)
+                    comment += f"Failed while inserting Meeting ID : {meeting.id} - Exception : "+ str(e) + "\n"
+                    failed_meetings.append(meeting.id)
                     continue
 
             db.session.commit()
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             cron_status = False
             comment = e
 
