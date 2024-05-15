@@ -130,9 +130,6 @@ def fetch_meetings_from_lms():
                 else:
                     comment += "No new meeting data found in " + decrypted_src['db_name'] + "\n"
         except Exception as e:
-            print(meeting_definition_response)
-            import traceback
-            traceback.print_exc()
             cron_status = False
             comment = e
 
@@ -202,11 +199,6 @@ def fetch_recordings_from_source():
     with app.app_context():
         try:
             print("scheduler start")
-            # zoom_token_url = 'https://zoom.us/oauth/token'
-            # zoom_grant_type = 'refresh_token'
-            # zoom_redirect_uri = 'https://corporate.digivarsity.com/'
-            # zoom_client_id = 'vZNKBhlgTrO_boj4qZHVpw'
-            # zoom_client_secret = 'B4PDzPtNtBPkjgrHsSvqmQteM1S2JNQ5'
             vimeo_url = "https://api.vimeo.com/me/videos"
 
             token_regen_flag = 0
@@ -217,42 +209,12 @@ def fetch_recordings_from_source():
             meetings_with_status = Meetings.query.filter_by(meeting_process_status=0) \
                                                  .filter(Meetings.meeting_end_time > get_unix_today_midnight()) \
                                                  .filter(Meetings.meeting_end_time <= get_unix_time()).all()
-            print(meetings_with_status)
 
             for meeting in meetings_with_status:
                 processed_meetings.append(meeting.id)
 
                 try:
                     access_token = get_token(token_regen_flag)
-
-                    # if token_regen_flag == 0:
-                    #     refresh_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='refresh_token').first()[0]
-
-                    #     url = f"{zoom_token_url}?grant_type={zoom_grant_type}&redirect_uri={zoom_redirect_uri} \
-                    #             &refresh_token={refresh_token}&client_id={zoom_client_id}&client_secret={zoom_client_secret}"
-
-                    #     response = requests.post(url)
-                    #     response_json = response.json()
-
-                    #     if ('refresh_token' in response_json) and ('access_token' in response_json):
-
-                    #         access_token = response_json['access_token']
-                    #         refresh_token = response_json['refresh_token']
-
-                    #         access_token_instance = db.session.query(EndpointTokens).filter_by(token_type='access_token').first()
-                    #         refresh_token_instance = db.session.query(EndpointTokens).filter_by(token_type='refresh_token').first()
-
-                    #         access_token_instance.token_value = access_token
-                    #         refresh_token_instance.token_value = refresh_token
-
-                    #         access_token_instance.updated_time = get_unix_time()
-                    #         refresh_token_instance.updated_time = get_unix_time()
-                    #         db.session.commit()
-                    #     else:
-                    #         raise Exception
-                    # else:
-                    #     access_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='access_token').first()[0]
-
                 except Exception as e:
                     cron_status = False
                     comment = "Zoom token regen failed! Exception : " + str(e)
@@ -366,8 +328,6 @@ def fetch_recordings_from_source():
 
             db.session.commit()
         except Exception as e:
-            import traceback
-            traceback.print_exc()
             cron_status = False
             comment = e
 
