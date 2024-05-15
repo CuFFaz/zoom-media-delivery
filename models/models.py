@@ -36,6 +36,7 @@ class Recording(db.Model):
     __tablename__ = 'recordings'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    meeting_tab_id = db.Column(db.Integer)
     remote_id = db.Column(db.Integer)
     course_id = db.Column(db.Integer)
     meeting_id = db.Column(db.String(255))
@@ -69,8 +70,8 @@ class SchedulerLog(db.Model):
     start_time = db.Column(db.Integer)
     end_time = db.Column(db.Integer)
     retry_count = db.Column(db.Integer)
-    processed_meetings = db.Column(db.Text)
-    failed_meetings = db.Column(db.Text)
+    processed_meeting_tab_id = db.Column(db.Text)
+    failed_meetings_tab_id = db.Column(db.Text)
     status = db.Column(db.Text)
     exceptions = db.Column(db.Text)
 
