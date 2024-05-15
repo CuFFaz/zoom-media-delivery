@@ -23,6 +23,10 @@ scheduler = BackgroundScheduler()
 
 # scheduler.add_job(fetch_meetings_from_lms, 'cron', hour=Config.scheduler_durations['fetch_meetings_from_lms']['hour']
 #                                                 , minute=Config.scheduler_durations['fetch_meetings_from_lms']['minute'])
+# scheduler.add_job(fetch_meetings_from_lms, 'cron', hour=11
+#                                                 , minute=39
+#                                                 , second=30)
+
 scheduler.add_job(fetch_meetings_from_lms, 'interval', seconds=Config.scheduler_durations['fetch_meetings_from_lms'])
 scheduler.add_job(fetch_recordings_from_source, 'interval', seconds=Config.scheduler_durations['fetch_recordings_from_zoom'])
 scheduler.add_job(pull_recording_status_from_dest, 'interval', seconds=Config.scheduler_durations['fetch_recording_status_from_vimeo'])

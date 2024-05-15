@@ -1,5 +1,6 @@
 from models.models import RemoteDatabases, Meetings, EndpointTokens, Recording, SchedulerLog
-from functions.functions import decrypt_credentials, get_unix_time, get_unix_yesterday
+from functions.functions import decrypt_credentials, get_unix_time, get_unix_today_midnight,\
+                                get_meeting_end_time, convert_zoom_time_format
 from urllib.parse import quote_plus
 
 from sqlalchemy import create_engine
@@ -28,6 +29,12 @@ def fetch_meetings_from_lms():
     with app.app_context():
         print("scheduler start")
         credentials = RemoteDatabases.query.all()
+
+        token_regen_flag = 0
+        refresh_token_starttime_unix = get_unix_time()
+        refresh_token_endtime_unix = get_unix_time()
+        zoom_token_expiry_duration = 3600               # Assuming 1 hour expiry duration
+
         try:
             for cred in credentials:
                 decrypted_src = decrypt_credentials(cred.src)
@@ -37,28 +44,94 @@ def fetch_meetings_from_lms():
                 engine = create_engine(uri)
                 remote_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
-                get_meeting_query = '''SELECT z.meeting_id, z.course, z.name FROM mdl_zoom z
+                get_meeting_query = '''SELECT z.meeting_id, z.course, z.name, z.recurring FROM mdl_zoom z
                                     WHERE unix_timestamp(z.created_at) >= :current_date_unix
                                     '''
+                meeting_data = remote_session.execute(text(get_meeting_query), {"current_date_unix": get_unix_today_midnight()}).mappings().all()
 
-                meeting_data = remote_session.execute(text(get_meeting_query), {"current_date_unix": get_unix_yesterday()}).mappings().all()
                 if meeting_data:
                     for item in meeting_data:
                         saved_meetings = db.session.query(Meetings).filter_by(meeting_id=item['meeting_id']).first()
+
+                        try:
+                            access_token = get_token(token_regen_flag)
+                        except Exception as e:
+                            cron_status = False
+                            comment = "Zoom token regen failed! Exception : " + str(e)
+                            break
+
+                        if (refresh_token_endtime_unix - refresh_token_starttime_unix) >= zoom_token_expiry_duration:
+                            refresh_token_starttime_unix = get_unix_time()
+                            token_regen_flag = 0
+                        else:
+                            token_regen_flag = 1
+
+
                         if saved_meetings:
                             comment += f"Meeting {item['meeting_id']} already added! \n"
                             continue
-                        meeting = Meetings(
-                            remote_id=cred.id,
-                            course_id=item['course'],
-                            meeting_id=item['meeting_id'],
-                            meeting_name=item['name'],
-                            meeting_process_status=0
-                        )
-                        db.session.add(meeting)
+
+                        zoom_url = f"https://api.zoom.us/v2/meetings/{item['meeting_id']}"
+                        headers = {
+                            'Authorization': f'Bearer {access_token}',
+                        }
+                        meeting_definition_response = requests.request("GET", zoom_url, headers=headers).json()
+
+                        if 'code' in meeting_definition_response and meeting_definition_response['code'] == 124:
+                            comment += f"Meeting {item['meeting_id']} sent error message : {meeting_definition_response['message']} \n"
+                            cron_status = False
+                            continue
+
+                        if item['recurring'] == 0:
+                            if ('code' in meeting_definition_response and meeting_definition_response['code'] == 3001):
+                                comment += f"Meeting {item['meeting_id']} sent error message : {meeting_definition_response['message']} \n"
+                                continue
+
+                            if ('start_time' in meeting_definition_response) and ('duration' in meeting_definition_response):
+                                meeting_end_time_ = get_meeting_end_time(meeting_definition_response['start_time'], meeting_definition_response['duration'], meeting_definition_response['timezone'])
+
+                            meeting = Meetings(
+                                remote_id=cred.id,
+                                course_id=item['course'],
+                                meeting_id=item['meeting_id'],
+                                meeting_name=item['name'],
+                                meeting_process_status=0,
+                                meeting_type=item['recurring'],
+                                meeting_end_time=meeting_end_time_
+                            )
+
+                            db.session.add(meeting)
+
+                        else:
+
+                            if ('occurrences' in meeting_definition_response):
+                                if (len(meeting_definition_response['occurrences']) != 0):
+                                    for meeting_occurence in meeting_definition_response['occurrences']:
+                                        meeting_end_time_ = get_meeting_end_time(meeting_occurence['start_time'], meeting_occurence['duration'], meeting_definition_response['timezone'])
+                                        meeting = Meetings(
+                                            remote_id=cred.id,
+                                            course_id=item['course'],
+                                            meeting_id=item['meeting_id'],
+                                            meeting_name=item['name'],
+                                            meeting_process_status=0,
+                                            meeting_type=item['recurring'],
+                                            meeting_end_time=meeting_end_time_,
+                                            meeting_occurrence_id=meeting_occurence['occurrence_id']
+                                        )
+
+                                        db.session.add(meeting)
+                                else:
+                                    comment += f"No Occurences found for Recurring Meeting {item['meeting_id']}.\n"
+                                    continue
+                            else:
+                                comment += f"No Occurences found for Recurring Meeting {item['meeting_id']}.\n"
+                                continue
                 else:
                     comment += "No new meeting data found in " + decrypted_src['db_name'] + "\n"
         except Exception as e:
+            print(meeting_definition_response)
+            import traceback
+            traceback.print_exc()
             cron_status = False
             comment = e
 
@@ -76,6 +149,45 @@ def fetch_meetings_from_lms():
 
     return
 
+def get_token(token_regen_flag):
+    from app import db
+
+    zoom_token_url = 'https://zoom.us/oauth/token'
+    zoom_grant_type = 'refresh_token'
+    zoom_redirect_uri = 'https://corporate.digivarsity.com/'
+    zoom_client_id = 'vZNKBhlgTrO_boj4qZHVpw'
+    zoom_client_secret = 'B4PDzPtNtBPkjgrHsSvqmQteM1S2JNQ5'
+
+    if token_regen_flag == 0:
+        refresh_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='refresh_token').first()[0]
+
+        url = f"{zoom_token_url}?grant_type={zoom_grant_type}&redirect_uri={zoom_redirect_uri} \
+                &refresh_token={refresh_token}&client_id={zoom_client_id}&client_secret={zoom_client_secret}"
+
+        response = requests.post(url)
+        response_json = response.json()
+
+        if ('refresh_token' in response_json) and ('access_token' in response_json):
+
+            access_token = response_json['access_token']
+            refresh_token = response_json['refresh_token']
+
+            access_token_instance = db.session.query(EndpointTokens).filter_by(token_type='access_token').first()
+            refresh_token_instance = db.session.query(EndpointTokens).filter_by(token_type='refresh_token').first()
+
+            access_token_instance.token_value = access_token
+            refresh_token_instance.token_value = refresh_token
+
+            access_token_instance.updated_time = get_unix_time()
+            refresh_token_instance.updated_time = get_unix_time()
+            db.session.commit()
+        else:
+            raise Exception
+    else:
+        access_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='access_token').first()[0]
+
+    return access_token
+
 
 def fetch_recordings_from_source():
     from app import app, db
@@ -89,52 +201,55 @@ def fetch_recordings_from_source():
     with app.app_context():
         try:
             print("scheduler start")
-            zoom_token_url = 'https://zoom.us/oauth/token'
-            zoom_grant_type = 'refresh_token'
-            zoom_redirect_uri = 'https://corporate.digivarsity.com/'
-            zoom_client_id = 'vZNKBhlgTrO_boj4qZHVpw'
-            zoom_client_secret = 'B4PDzPtNtBPkjgrHsSvqmQteM1S2JNQ5'
+            # zoom_token_url = 'https://zoom.us/oauth/token'
+            # zoom_grant_type = 'refresh_token'
+            # zoom_redirect_uri = 'https://corporate.digivarsity.com/'
+            # zoom_client_id = 'vZNKBhlgTrO_boj4qZHVpw'
+            # zoom_client_secret = 'B4PDzPtNtBPkjgrHsSvqmQteM1S2JNQ5'
             vimeo_url = "https://api.vimeo.com/me/videos"
 
+            token_regen_flag = 0
             refresh_token_starttime_unix = get_unix_time()
             refresh_token_endtime_unix = get_unix_time()
             zoom_token_expiry_duration = 3600               # Assuming 1 hour expiry duration
 
-            meetings_with_status = Meetings.query.filter_by(meeting_process_status=0).all()
+            meetings_with_status = Meetings.query.filter_by(meeting_process_status=0) \
+                                                 .filter(Meetings.meeting_end_time > get_unix_today_midnight()) \
+                                                 .filter(Meetings.meeting_end_time <= get_unix_time()).all()
 
             for meeting in meetings_with_status:
                 processed_meetings.append(meeting.meeting_id)
 
                 try:
-                    token_regen_flag = 0
+                    access_token = get_token(token_regen_flag)
 
-                    if token_regen_flag == 0:
-                        refresh_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='refresh_token').first()[0]
+                    # if token_regen_flag == 0:
+                    #     refresh_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='refresh_token').first()[0]
 
-                        url = f"{zoom_token_url}?grant_type={zoom_grant_type}&redirect_uri={zoom_redirect_uri} \
-                                &refresh_token={refresh_token}&client_id={zoom_client_id}&client_secret={zoom_client_secret}"
+                    #     url = f"{zoom_token_url}?grant_type={zoom_grant_type}&redirect_uri={zoom_redirect_uri} \
+                    #             &refresh_token={refresh_token}&client_id={zoom_client_id}&client_secret={zoom_client_secret}"
 
-                        response = requests.post(url)
-                        response_json = response.json()
+                    #     response = requests.post(url)
+                    #     response_json = response.json()
 
-                        if ('refresh_token' in response_json) and ('access_token' in response_json):
+                    #     if ('refresh_token' in response_json) and ('access_token' in response_json):
 
-                            access_token = response_json['access_token']
-                            refresh_token = response_json['refresh_token']
+                    #         access_token = response_json['access_token']
+                    #         refresh_token = response_json['refresh_token']
 
-                            access_token_instance = db.session.query(EndpointTokens).filter_by(token_type='access_token').first()
-                            refresh_token_instance = db.session.query(EndpointTokens).filter_by(token_type='refresh_token').first()
+                    #         access_token_instance = db.session.query(EndpointTokens).filter_by(token_type='access_token').first()
+                    #         refresh_token_instance = db.session.query(EndpointTokens).filter_by(token_type='refresh_token').first()
 
-                            access_token_instance.token_value = access_token
-                            refresh_token_instance.token_value = refresh_token
+                    #         access_token_instance.token_value = access_token
+                    #         refresh_token_instance.token_value = refresh_token
 
-                            access_token_instance.updated_time = get_unix_time()
-                            refresh_token_instance.updated_time = get_unix_time()
-                            db.session.commit()
-                        else:
-                            raise Exception
-                    else:
-                        access_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='access_token').first()[0]
+                    #         access_token_instance.updated_time = get_unix_time()
+                    #         refresh_token_instance.updated_time = get_unix_time()
+                    #         db.session.commit()
+                    #     else:
+                    #         raise Exception
+                    # else:
+                    #     access_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='access_token').first()[0]
 
                 except Exception as e:
                     cron_status = False
@@ -220,6 +335,8 @@ def fetch_recordings_from_source():
                                 course_id = meeting.course_id,
                                 meeting_id = meeting.meeting_id,
                                 meeting_name = meeting.meeting_name,
+                                meeting_type = meeting.meeting_type,
+                                meeting_start_time = convert_zoom_time_format(zoom_response['start_time'], zoom_response['timezone']),
                                 zoom_recording_uuid = zoom_response['uuid'],
                                 zoom_recording_download_url = recording_link,
                                 zoom_recording_download_password = zoom_response['password'],
@@ -283,14 +400,14 @@ def pull_recording_status_from_dest():
             processed_meetings.append(recording.meeting_id)
             try:
                 recording_status = 0
-                vimeo_status_url = vimeo_status_url + recording.vimeo_id
+                vimeo_url = vimeo_status_url + recording.vimeo_id
                 vimeo_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='vimeo_token').first()[0]
 
                 headers = {
                     'Authorization': 'Bearer ' + vimeo_token
                 }
 
-                response = requests.get(vimeo_status_url, headers=headers)
+                response = requests.get(vimeo_url, headers=headers)
                 response_json = response.json()
 
                 if 'error' not in response_json:
@@ -362,13 +479,15 @@ def push_recording_to_source():
 
                 remote_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
                 insert_recording_query = '''INSERT INTO mdl_zoom_vimeo_recordings_mapping
-                    (meeting_id, vimeo_link, vimeo_player_embed_url, created_time) VALUES (
-                    :meeting_id, :vimeo_link, :vimeo_player_embed_url, :created_time)'''
+                    (meeting_id, recurring, vimeo_link, vimeo_player_embed_url, meeting_start_time, created_time) VALUES (
+                    :meeting_id, :recurring, :vimeo_link, :vimeo_player_embed_url, :meeting_start_time, :created_time)'''
 
                 params = {
                         "meeting_id": recording.meeting_id,
+                        "recurring": recording.meeting_type,
                         "vimeo_link": recording.vimeo_link,
                         "vimeo_player_embed_url": recording.vimeo_player_embed_url,
+                        "meeting_start_time":recording.meeting_start_time,
                         "created_time": get_unix_time()
                         }
 

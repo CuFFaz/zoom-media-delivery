@@ -27,8 +27,10 @@ class Meetings(db.Model):
     meeting_name = db.Column(db.Text)
     # # 0 - Non recurring meets
     # # 1 - recurring meets
-    # meeting_type = db.Column(db.Integer, default=0)
+    meeting_type = db.Column(db.Integer, default=0)
+    meeting_occurrence_id = db.Column(db.Text)    
     meeting_process_status = db.Column(db.Integer)
+    meeting_end_time = db.Column(db.Integer)
 
 class Recording(db.Model):
     __tablename__ = 'recordings'
@@ -38,6 +40,8 @@ class Recording(db.Model):
     course_id = db.Column(db.Integer)
     meeting_id = db.Column(db.String(255))
     meeting_name = db.Column(db.Text)
+    meeting_type = db.Column(db.Integer, default=0)
+    meeting_start_time = db.Column(db.Integer)
     zoom_recording_uuid = db.Column(db.String(255))
     zoom_recording_download_url = db.Column(db.Text)
     zoom_recording_download_password = db.Column(db.String(255))
