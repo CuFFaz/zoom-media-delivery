@@ -8,6 +8,7 @@ from sqlalchemy.sql import text
 from sqlalchemy.orm import scoped_session, sessionmaker
 import requests
 import json
+import time
 
 def remote_uri(decrypted_src, decrypted_pwd):
     return '{}://{}:{}@{}:{}/{}'.format(
@@ -430,6 +431,8 @@ def pull_recording_status_from_dest():
                     comment += f"Vimeo return an error at recording_id : {recording.id} - Error : "+ response_json['error'] +" \n"
                     failed_meetings.append(recording.meeting_id)
                     continue
+
+                time.sleep(2)
 
             except Exception as e:
                 cron_status = False
