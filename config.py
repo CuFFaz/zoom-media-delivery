@@ -37,7 +37,16 @@ class Config:
                             "fetch_recording_status_from_vimeo" :   30,                             # in seconds
                             "push_recording_link_to_lms" :          25,                             # in seconds
                         }
+    
+    zoom_token_url = 'https://zoom.us/oauth/token'
+    zoom_grant_type = 'refresh_token'
+    zoom_redirect_uri = 'https://corporate.digivarsity.com/'
+    zoom_client_id = 'vZNKBhlgTrO_boj4qZHVpw'
+    zoom_client_secret = 'B4PDzPtNtBPkjgrHsSvqmQteM1S2JNQ5'
 
+    vimeo_url = "https://api.vimeo.com/me/videos"
+    vimeo_status_url = 'https://api.vimeo.com/me'
+    
 class DevelopmentConfig(Config):
     DEBUG = True
 

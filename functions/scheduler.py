@@ -9,6 +9,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 import requests
 import json
 import time
+from config import Config
 
 def remote_uri(decrypted_src, decrypted_pwd):
     return '{}://{}:{}@{}:{}/{}'.format(
@@ -156,17 +157,11 @@ def fetch_meetings_from_lms():
 def get_token(token_regen_flag):
     from app import db
 
-    zoom_token_url = 'https://zoom.us/oauth/token'
-    zoom_grant_type = 'refresh_token'
-    zoom_redirect_uri = 'https://corporate.digivarsity.com/'
-    zoom_client_id = 'vZNKBhlgTrO_boj4qZHVpw'
-    zoom_client_secret = 'B4PDzPtNtBPkjgrHsSvqmQteM1S2JNQ5'
-
     if token_regen_flag == 0:
         refresh_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='refresh_token').first()[0]
 
-        url = f"{zoom_token_url}?grant_type={zoom_grant_type}&redirect_uri={zoom_redirect_uri} \
-                &refresh_token={refresh_token}&client_id={zoom_client_id}&client_secret={zoom_client_secret}"
+        url = f"{Config.zoom_token_url}?grant_type={Config.zoom_grant_type}&redirect_uri={Config.zoom_redirect_uri} \
+                &refresh_token={refresh_token}&client_id={Config.zoom_client_id}&client_secret={Config.zoom_client_secret}"
 
         response = requests.post(url)
         response_json = response.json()
@@ -205,7 +200,6 @@ def fetch_recordings_from_source():
     with app.app_context():
         try:
             print("scheduler start")
-            vimeo_url = "https://api.vimeo.com/me/videos"
 
             token_regen_flag = 0
             refresh_token_starttime_unix = get_unix_time()
@@ -290,7 +284,7 @@ def fetch_recordings_from_source():
                         'Content-Type': 'application/json',
                     }
 
-                    vimeo_response = requests.request("POST", vimeo_url, headers=headers, data=payload).json()
+                    vimeo_response = requests.request("POST", Config.vimeo_url, headers=headers, data=payload).json()
 
                     if 'error_code' in vimeo_response and vimeo_response['error_code'] == 4101:  # Insufficient space on vimeo error
                         cron_status = False
@@ -378,14 +372,13 @@ def pull_recording_status_from_dest():
 
     with app.app_context():
         print("scheduler start")
-        vimeo_status_url = 'https://api.vimeo.com/me'
         
         recording_with_status = Recording.query.filter_by(status=0).all()
         for recording in recording_with_status: 
             processed_meetings.append(str(recording.meeting_tab_id))
             try:
                 recording_status = 0
-                vimeo_url = vimeo_status_url + recording.vimeo_id
+                vimeo_url = Config.vimeo_status_url + recording.vimeo_id
                 vimeo_token = db.session.query(EndpointTokens.token_value).filter_by(token_type='vimeo_token').first()[0]
 
                 headers = {
